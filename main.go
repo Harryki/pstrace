@@ -80,12 +80,12 @@ func main() {
 	}
 
 	callGraph := map[string][]string{}
-	for name, body := range funcBodies {
+	for caller, body := range funcBodies {
 		for _, line := range body {
 			for _, match := range callRegex.FindAllStringIndex(line, -1) {
 				start := match[0]
 				end := match[1]
-				word := line[start:end]
+				callee := line[start:end]
 
 				// Check character before the match
 				if start > 0 {
@@ -96,8 +96,8 @@ func main() {
 				}
 
 				//  if word is found in a funcNames and is not the same as the current function
-				if _, ok := userFuncs[strings.ToLower(word)]; ok && !strings.EqualFold(name, word) {
-					callGraph[name] = appendIfMissing(callGraph[name], word)
+				if _, ok := userFuncs[strings.ToLower(callee)]; ok && !strings.EqualFold(caller, callee) {
+					callGraph[callee] = appendIfMissing(callGraph[callee], caller)
 				}
 			}
 		}
