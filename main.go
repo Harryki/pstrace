@@ -29,17 +29,16 @@ func main() {
 	funcNames := []string{}
 
 	var currentFunc string
+
 	var collecting bool
 	var buffer []string
+	var counter int
 
 	for _, line := range lines {
 		lineTrim := strings.TrimSpace(line)
 
+		// If line matches a function declaration pattern, we will collect function name and its full body
 		if matches := funcDeclRegex.FindStringSubmatch(lineTrim); matches != nil {
-			if collecting && currentFunc != "" {
-				funcBodies[currentFunc] = append([]string{}, buffer...)
-				buffer = nil
-			}
 			currentFunc = matches[1]
 
 			funcNames = append(funcNames, currentFunc)
@@ -49,14 +48,29 @@ func main() {
 		}
 
 		if collecting {
-			buffer = append(buffer, line)
-			// naive ending check, you might want to make this a brace counter later
-			if strings.TrimSpace(line) == "}" {
+			// if line starts with #, ignore
+			// if line starts with <#, set ignoring to true.
+			// if line starts with #>, ig nore the line, check if ingoring is true, if so, set it to false
+
+			if strings.Contains(line, "{") {
+				counter += strings.Count(line, "{")
+			}
+			if strings.Contains(line, "}") {
+				counter -= strings.Count(line, "}")
+			}
+
+			if counter > 0 {
+				buffer = append(buffer, line)
+			} else if counter == 0 && buffer != nil {
+				// function body is complete
 				funcBodies[currentFunc] = append([]string{}, buffer...)
 				buffer = nil
 				collecting = false
 			}
 		}
+	}
+	if counter != 0 {
+		panic("Counter is negative when it should be 0!")
 	}
 
 	// Step 2: Build call graph
@@ -67,16 +81,6 @@ func main() {
 
 	callGraph := map[string][]string{}
 	for name, body := range funcBodies {
-		// bodyJoined := strings.Join(body, "\n")
-		// // TODO: check callRegex works
-		// matches := callRegex.FindAllStringSubmatch(bodyJoined, -1)
-		// for _, match := range matches {
-		// 	callee := match[1]
-		// 	if _, ok := userFuncs[strings.ToLower(callee)]; ok && !strings.EqualFold(name, callee) {
-		// 		callGraph[name] = appendIfMissing(callGraph[name], callee)
-		// 	}
-		// }
-
 		for _, line := range body {
 			for _, match := range callRegex.FindAllStringIndex(line, -1) {
 				start := match[0]
