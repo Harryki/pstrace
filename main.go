@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -138,9 +139,21 @@ func main() {
 			fmt.Printf("No paths found to %s\n", target)
 			return
 		}
+		// sort paths by first element
+		sortPathsByRoot(paths)
+
 		printPathsIndented(paths, target)
 		return
 	}
+}
+
+func sortPathsByRoot(paths [][]string) {
+	sort.Slice(paths, func(i, j int) bool {
+		// compare case-insensitively
+		left := strings.ToLower(paths[i][0])
+		right := strings.ToLower(paths[j][0])
+		return left < right
+	})
 }
 
 func appendIfMissing(slice []string, val string) []string {
