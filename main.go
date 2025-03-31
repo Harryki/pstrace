@@ -3,9 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"sort"
-	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/harryki/pstrace/graph"
 	"github.com/harryki/pstrace/parser"
 	"github.com/harryki/pstrace/pathfinder"
@@ -37,37 +36,11 @@ func main() {
 		pf := pathfinder.NewReverseAllPathsFinder()
 		paths := pf.FindPaths(callGraph, target)
 
-		// sort paths by first element
-		sortPathsByRoot(paths)
-
-		printPathsIndented(paths, target)
-		return
-	}
-}
-
-func sortPathsByRoot(paths [][]string) {
-	sort.Slice(paths, func(i, j int) bool {
-		// compare case-insensitively
-		left := strings.ToLower(paths[i][0])
-		right := strings.ToLower(paths[j][0])
-		return left < right
-	})
-}
-
-func printPathsIndented(paths [][]string, target string) {
-	yellow := "\x1b[1;33m"
-	reset := "\x1b[0m"
-
-	for i, path := range paths {
-		fmt.Printf("Path #%d:\n", i+1)
-		for depth, name := range path {
-			prefix := strings.Repeat("  ", depth)
-			if strings.EqualFold(name, target) {
-				fmt.Printf("%s↳ %s%s%s \n", prefix, yellow, name, reset)
-			} else {
-				fmt.Printf("%s↳ %s\n", prefix, name)
-			}
+		m := NewCallGraphTUIModel(paths, target) // you'll define this in model.go
+		if _, err := tea.NewProgram(m).Run(); err != nil {
+			os.Exit(1)
 		}
-		fmt.Println()
+
+		return
 	}
 }
