@@ -1,6 +1,8 @@
 package main
 
 import (
+	"sort"
+
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
 )
@@ -12,10 +14,16 @@ type Model struct {
 	target     string
 }
 
+type listItem string
+
+func (i listItem) Title() string       { return string(i) }
+func (i listItem) Description() string { return "" }
+func (i listItem) FilterValue() string { return string(i) }
+
 func NewCallGraphTUIModel(paths [][]string, target string) Model {
 	callers := []list.Item{}
 	seen := map[string]bool{}
-	mockPaths := map[string][][]string{}
+	pathsBycaller := map[string][][]string{}
 
 	for _, path := range paths {
 		if len(path) == 0 {
@@ -25,28 +33,39 @@ func NewCallGraphTUIModel(paths [][]string, target string) Model {
 		if !seen[first] {
 			callers = append(callers, listItem(first))
 			seen[first] = true
-			mockPaths[first] = [][]string{path}
+			pathsBycaller[first] = [][]string{path}
 		} else {
-			mockPaths[first] = append(mockPaths[first], path)
+			pathsBycaller[first] = append(pathsBycaller[first], path)
 		}
 	}
+	// TODO: maybe create callers first with sorted order and build pathsBycaller?
+	// Convert []list.Item to []listItem
+	var rawItems []listItem
+	for _, item := range callers {
+		rawItems = append(rawItems, item.(listItem))
+	}
 
-	// height := len(callers) + 2 // +2 for title + padding
+	// Sort by string value
+	sort.Slice(rawItems, func(i, j int) bool {
+		return rawItems[i] < rawItems[j] // or use strings.ToLower(...) if needed
+	})
+
+	// Convert back to []list.Item
+	callers = make([]list.Item, len(rawItems))
+	for i, item := range rawItems {
+		callers[i] = item
+	}
+
 	listModel := list.New(callers, list.NewDefaultDelegate(), 25, 50)
 	listModel.Title = "Top-Level Callers"
+	listModel.SetFilteringEnabled(true)
 	vp := viewport.New(60, 40)
-	vp.SetContent(renderPaths(mockPaths[callers[0].FilterValue()], target))
+	vp.SetContent(renderPaths(pathsBycaller[callers[0].FilterValue()], target))
 
 	return Model{
 		callers:    listModel,
 		paths:      vp,
-		callerData: mockPaths,
+		callerData: pathsBycaller,
 		target:     target,
 	}
 }
-
-type listItem string
-
-func (i listItem) Title() string       { return string(i) }
-func (i listItem) Description() string { return "" }
-func (i listItem) FilterValue() string { return string(i) }
