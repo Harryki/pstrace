@@ -37,6 +37,15 @@ func main() {
 		paths := pf.FindPaths(callGraph, target)
 
 		m := NewCallGraphTUIModel(paths, target) // you'll define this in model.go
+
+		// this will record log.Println("something happened") to debug.log file
+		f, err := tea.LogToFile("debug.log", "debug")
+		if err != nil {
+			fmt.Println("fatal:", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+
 		if _, err := tea.NewProgram(m).Run(); err != nil {
 			os.Exit(1)
 		}

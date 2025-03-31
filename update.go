@@ -10,12 +10,10 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+	m.callers, cmd = m.callers.Update(msg) // ← always handle all msg types
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		// Update list selection
-		m.callers, cmd = m.callers.Update(msg)
-		selected := m.callers.SelectedItem().(listItem)
+	if selectedItem := m.callers.SelectedItem(); selectedItem != nil {
+		selected := selectedItem.(listItem)
 		m.paths.SetContent(renderPaths(m.callerData[string(selected)], m.target))
 	}
 
