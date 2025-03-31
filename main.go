@@ -33,6 +33,7 @@ func main() {
 	var collecting bool
 	var buffer []string
 	var counter int
+	var ignoring bool
 
 	for _, line := range lines {
 		lineTrim := strings.TrimSpace(line)
@@ -48,9 +49,26 @@ func main() {
 		}
 
 		if collecting {
-			// if line starts with #, ignore
-			// if line starts with <#, set ignoring to true.
-			// if line starts with #>, ig nore the line, check if ingoring is true, if so, set it to false
+			if strings.Contains(lineTrim, "<#") && strings.Contains(lineTrim, "#>") {
+				continue // one-line block comment
+			}
+			if strings.HasPrefix(lineTrim, "<#") {
+				ignoring = true
+				continue
+			}
+			if strings.Contains(lineTrim, "#>") {
+				ignoring = false
+				continue
+			}
+			if ignoring || strings.HasPrefix(lineTrim, "#") {
+				continue
+			}
+			if idx := strings.Index(lineTrim, "#"); idx != -1 {
+				lineTrim = strings.TrimSpace(lineTrim[:idx])
+			}
+			if lineTrim == "" {
+				continue
+			}
 
 			if strings.Contains(line, "{") {
 				counter += strings.Count(line, "{")
@@ -60,9 +78,10 @@ func main() {
 			}
 
 			if counter > 0 {
-				buffer = append(buffer, line)
-			} else if counter == 0 && buffer != nil {
-				// function body is complete
+				buffer = append(buffer, lineTrim)
+			}
+
+			if counter == 0 && buffer != nil {
 				funcBodies[currentFunc] = append([]string{}, buffer...)
 				buffer = nil
 				collecting = false
@@ -105,10 +124,22 @@ func main() {
 	}
 
 	// Print call graph
-	for caller, callees := range callGraph {
-		for _, callee := range callees {
-			fmt.Printf("%s -> %s\n", caller, callee)
+	// for caller, callees := range callGraph {
+	// 	for _, callee := range callees {
+	// 		fmt.Printf("%s -> %s\n", caller, callee)
+	// 	}
+	// }
+
+	// Check for --paths-to option
+	if len(os.Args) >= 4 && os.Args[2] == "--paths-to" {
+		target := os.Args[3]
+		paths := findPathsToTargetReversed(callGraph, target)
+		if len(paths) == 0 {
+			fmt.Printf("No paths found to %s\n", target)
+			return
 		}
+		printPathsIndented(paths, target)
+		return
 	}
 }
 
@@ -119,4 +150,48 @@ func appendIfMissing(slice []string, val string) []string {
 		}
 	}
 	return append(slice, val)
+}
+
+func findPathsToTargetReversed(graph map[string][]string, target string) [][]string {
+	var results [][]string
+
+	var dfs func(path []string, current string, visited map[string]bool)
+	dfs = func(path []string, current string, visited map[string]bool) {
+		if visited[strings.ToLower(current)] {
+			return
+		}
+		visited[strings.ToLower(current)] = true
+		defer delete(visited, strings.ToLower(current))
+
+		path = append([]string{current}, path...) // prepend
+		callers := graph[current]
+		if len(callers) == 0 {
+			results = append(results, append([]string{}, path...))
+			return
+		}
+		for _, caller := range callers {
+			dfs(path, caller, visited)
+		}
+	}
+
+	dfs([]string{}, target, map[string]bool{})
+	return results
+}
+
+func printPathsIndented(paths [][]string, target string) {
+	yellow := "\x1b[1;33m"
+	reset := "\x1b[0m"
+
+	for i, path := range paths {
+		fmt.Printf("Path #%d:\n", i+1)
+		for depth, name := range path {
+			prefix := strings.Repeat("  ", depth)
+			if strings.EqualFold(name, target) {
+				fmt.Printf("%s↳ %s%s%s  ← target\n", prefix, yellow, name, reset)
+			} else {
+				fmt.Printf("%s↳ %s\n", prefix, name)
+			}
+		}
+		fmt.Println()
+	}
 }
