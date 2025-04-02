@@ -3,3 +3,4 @@
 debug.log
 __debug*
 *psm1
+pstrace
