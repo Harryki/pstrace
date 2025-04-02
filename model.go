@@ -56,7 +56,7 @@ func NewCallGraphTUIModel(paths [][]string, target string) Model {
 		callers[i] = item
 	}
 
-	listModel := list.New(callers, list.NewDefaultDelegate(), 25, 50)
+	listModel := list.New(callers, list.NewDefaultDelegate(), 0, 0)
 	listModel.Title = "Top-Level Callers"
 	listModel.SetFilteringEnabled(true)
 	vp := viewport.New(60, 40)
