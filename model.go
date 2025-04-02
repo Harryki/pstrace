@@ -3,6 +3,7 @@ package main
 import (
 	"sort"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
 )
@@ -13,6 +14,16 @@ type Model struct {
 	callerData map[string][][]string // caller -> list of paths to target
 	target     string
 }
+
+var pUpKey = key.NewBinding(
+	key.WithKeys("["),
+	key.WithHelp("[", "Page Up"),
+)
+
+var pDownvKey = key.NewBinding(
+	key.WithKeys("]"),
+	key.WithHelp("]", "Page Down"),
+)
 
 type listItem string
 
@@ -59,6 +70,16 @@ func NewCallGraphTUIModel(paths [][]string, target string) Model {
 	listModel := list.New(callers, list.NewDefaultDelegate(), 0, 0)
 	listModel.Title = "Top-Level Callers"
 	listModel.SetFilteringEnabled(true)
+
+	// Add your custom key bindings to the help view
+	listModel.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{pUpKey, pDownvKey}
+	}
+
+	listModel.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{pUpKey, pDownvKey}
+	}
+
 	vp := viewport.New(60, 40)
 	vp.SetContent(renderPaths(pathsBycaller[callers[0].FilterValue()], target))
 

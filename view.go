@@ -7,8 +7,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+var leftPaneStyle = lipgloss.NewStyle().Width(40)
+
 func (m Model) View() string {
-	left := m.callers.View()
+	left := leftPaneStyle.Render(m.callers.View())
 	right := m.paths.View()
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }
