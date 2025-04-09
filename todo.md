@@ -8,3 +8,4 @@
 - [ ] should receive installed module path
 - [ ] should trace all declared functions in the module including required module
 - [ ] page up/down should present whole Path list
+- [ ] bug: exclude the case that function name is appeared in multi-line string `@"`
